@@ -40,61 +40,38 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
     setProcessing(prev => new Set(prev).add(imageFile.id));
     
     try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = document.createElement('img');
+      const formData = new FormData();
+      formData.append('file', imageFile.file);
+      formData.append('quality', settings.quality.toString());
+      formData.append('format', settings.format);
+      formData.append('maintainAspectRatio', settings.maintainAspectRatio.toString());
       
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = imageFile.preview;
-      });
-
-      let { width, height } = img;
-      
-      if (settings.width || settings.height) {
-        if (settings.maintainAspectRatio) {
-          const aspectRatio = width / height;
-          if (settings.width && settings.height) {
-            const targetRatio = settings.width / settings.height;
-            if (aspectRatio > targetRatio) {
-              width = settings.width;
-              height = settings.width / aspectRatio;
-            } else {
-              height = settings.height;
-              width = settings.height * aspectRatio;
-            }
-          } else if (settings.width) {
-            width = settings.width;
-            height = settings.width / aspectRatio;
-          } else if (settings.height) {
-            height = settings.height;
-            width = settings.height * aspectRatio;
-          }
-        } else {
-          width = settings.width || width;
-          height = settings.height || height;
-        }
+      if (settings.width) {
+        formData.append('width', settings.width.toString());
       }
-
-      canvas.width = width;
-      canvas.height = height;
+      if (settings.height) {
+        formData.append('height', settings.height.toString());
+      }
       
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        const mimeType = `image/${settings.format}`;
-        const quality = settings.quality / 100;
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const processedUrl = URL.createObjectURL(blob);
-            onImageProcessed(imageFile.id, processedUrl, blob.size);
-          }
-        }, mimeType, quality);
+      const response = await fetch('/api/compress', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('圧縮に失敗しました');
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        onImageProcessed(imageFile.id, result.compressedImage, result.compressedSize);
+      } else {
+        throw new Error(result.error || '圧縮に失敗しました');
       }
     } catch (error) {
       console.error('画像処理エラー:', error);
+      alert('画像の圧縮に失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'));
     } finally {
       setProcessing(prev => {
         const newSet = new Set(prev);
@@ -105,16 +82,40 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
   }, [settings, onImageProcessed]);
 
   const downloadImage = useCallback((imageFile: ImageFile) => {
-    const url = imageFile.processed || imageFile.preview;
+    if (!imageFile.processed) return;
+    
     const extension = settings.format === 'jpeg' ? 'jpg' : settings.format;
     const filename = `compressed_${imageFile.file.name.split('.')[0]}.${extension}`;
     
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    // data: URLからBlobを作成
+    if (imageFile.processed.startsWith('data:')) {
+      const byteCharacters = atob(imageFile.processed.split(',')[1]);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: `image/${settings.format}` });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // URLをクリーンアップ
+      URL.revokeObjectURL(url);
+    } else {
+      // Blob URLの場合
+      const a = document.createElement('a');
+      a.href = imageFile.processed;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
   }, [settings.format]);
 
   const downloadAll = useCallback(() => {
