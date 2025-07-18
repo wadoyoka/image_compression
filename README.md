@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 画像圧縮ツール (Image Compressor)
 
-## Getting Started
+ユーザーが画像をアップロードし、品質調整・リサイズ・形式変換を行える Web アプリケーション。  
+直感的な GUI でバッチ処理にも対応した高機能な画像圧縮ツールです。
 
-First, run the development server:
+## 🌟 主要機能
+
+### 📁 画像アップロード
+- **ドラッグ&ドロップ対応**: 簡単に画像をアップロード
+- **複数ファイル同時選択**: 一度に複数の画像を処理
+- **プレビュー表示**: アップロード前に画像を確認
+
+### ⚙️ 圧縮設定
+- **品質調整**: スライダーでの直感的な品質設定 (1-100%)
+- **リサイズ**: 幅・高さの指定、アスペクト比維持オプション
+- **形式変換**: JPEG ↔ PNG ↔ WebP の相互変換
+
+### 🔄 バッチ処理
+- **複数画像の一括処理**: すべての画像を一度に圧縮
+- **個別処理**: 画像ごとに個別に圧縮処理
+- **処理状況表示**: リアルタイムで処理状況を確認
+
+### 💾 ダウンロード
+- **個別ダウンロード**: 処理済み画像を1つずつダウンロード
+- **一括ダウンロード**: すべての処理済み画像をまとめてダウンロード
+- **ファイルサイズ比較**: 処理前後のファイルサイズを表示
+
+## 🛠️ 技術スタック
+
+- **フレームワーク**: [Next.js 15](https://nextjs.org) (App Router)
+- **言語**: [TypeScript](https://www.typescriptlang.org)
+- **スタイリング**: [Tailwind CSS](https://tailwindcss.com)
+- **パッケージマネージャー**: npm
+
+## 📋 対応画像形式
+
+- **入力**: JPEG, PNG, WebP
+- **出力**: JPEG, PNG, WebP (相互変換可能)
+
+## 🚀 セットアップ
+
+### 前提条件
+- Node.js 18.0以上
+- npm
+
+### インストールと起動
 
 ```bash
+# リポジトリをクローン
+git clone <repository-url>
+cd image_compression
+
+# 依存関係をインストール
+npm install
+
+# 開発サーバーを起動
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで [http://localhost:3000](http://localhost:3000) を開いてアプリケーションを確認できます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📜 利用可能なスクリプト
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# 開発サーバー起動 (Turbopack使用)
+npm run dev
 
-## Learn More
+# プロダクションビルド
+npm run build
 
-To learn more about Next.js, take a look at the following resources:
+# プロダクションサーバー起動
+npm start
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# コード品質チェック
+npm run lint
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🏗️ プロジェクト構造
 
-## Deploy on Vercel
+```
+src/
+├── app/
+│   ├── globals.css      # グローバルスタイル
+│   ├── layout.tsx       # ルートレイアウト
+│   └── page.tsx         # メインページ
+└── components/
+    ├── ImageUploader.tsx    # 画像アップロード機能
+    └── ImageProcessor.tsx   # 画像処理・表示機能
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎯 使用方法
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **画像をアップロード**: ドラッグ&ドロップまたはクリックで画像を選択
+2. **設定を調整**: 品質、サイズ、形式を指定
+3. **圧縮実行**: 個別または一括で画像を処理
+4. **ダウンロード**: 処理済み画像をダウンロード
+
+## 🌐 デプロイ
+
+### Vercel (推奨)
+
+最も簡単なデプロイ方法は [Vercel Platform](https://vercel.com/import?filter=next.js) を使用することです。
+
+詳細は [Next.js デプロイメントドキュメント](https://nextjs.org/docs/app/building-your-application/deploying) を参照してください。
+
+## 📄 ライセンス
+
+このプロジェクトは MIT ライセンスの下で公開されています。
