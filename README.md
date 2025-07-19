@@ -23,7 +23,7 @@
 
 ### 💾 ダウンロード
 - **個別ダウンロード**: 処理済み画像を1つずつダウンロード
-- **一括ダウンロード**: すべての処理済み画像をまとめてダウンロード
+- **ZIP一括ダウンロード**: すべての処理済み画像をZIP形式でまとめてダウンロード
 - **ファイルサイズ比較**: 処理前後のファイルサイズを表示
 
 ## 🛠️ 技術スタック
@@ -31,7 +31,8 @@
 - **フレームワーク**: [Next.js 15](https://nextjs.org) (App Router)
 - **言語**: [TypeScript](https://www.typescriptlang.org)
 - **画像処理**: [Sharp](https://sharp.pixelplumbing.com/) (高性能な画像処理ライブラリ)
-- **スタイリング**: [Tailwind CSS](https://tailwindcss.com)
+- **ファイル圧縮**: [JSZip](https://stuk.github.io/jszip/) (ZIP形式でのファイル圧縮)
+- **スタイリング**: [Tailwind CSS](https://tailwindcss.com) → 将来的に[Material-UI](https://mui.com/)に移行予定
 - **パッケージマネージャー**: npm
 
 ## 📋 対応画像形式
@@ -112,6 +113,14 @@ docs/
 最も簡単なデプロイ方法は [Vercel Platform](https://vercel.com/import?filter=next.js) を使用することです。
 
 詳細は [Next.js デプロイメントドキュメント](https://nextjs.org/docs/app/building-your-application/deploying) を参照してください。
+
+## 🔮 今後の予定
+
+### 近日実装予定の機能
+- **進捗表示の改善**: より詳細な処理状況表示
+- **画像フォーマット拡張**: AVIF、HEIC等の対応検討
+- **UI/UX改善**: Material-UI導入とデザイン向上
+- **処理最適化**: より高速な画像処理アルゴリズム
 
 ## 📄 ライセンス
 
