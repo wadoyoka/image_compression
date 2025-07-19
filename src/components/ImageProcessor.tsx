@@ -126,6 +126,68 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
     });
   }, [images, downloadImage]);
 
+  const downloadAllAsZip = useCallback(async () => {
+    const processedImages = images.filter(img => img.processed);
+    if (processedImages.length === 0) return;
+
+    try {
+      const formData = new FormData();
+      
+      // 処理済み画像のファイルを追加
+      processedImages.forEach(imageFile => {
+        formData.append('files', imageFile.file);
+      });
+      
+      formData.append('quality', settings.quality.toString());
+      formData.append('format', settings.format);
+      formData.append('maintainAspectRatio', settings.maintainAspectRatio.toString());
+      
+      if (settings.width) {
+        formData.append('width', settings.width.toString());
+      }
+      if (settings.height) {
+        formData.append('height', settings.height.toString());
+      }
+      
+      const response = await fetch('/api/compress-batch', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('ZIP作成に失敗しました');
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // ZIPファイルをダウンロード
+        const byteCharacters = atob(result.zipFile.split(',')[1]);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/zip' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `compressed_images_${new Date().toISOString().slice(0, 10)}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+      } else {
+        throw new Error(result.error || 'ZIP作成に失敗しました');
+      }
+    } catch (error) {
+      console.error('ZIP作成エラー:', error);
+      alert('ZIPファイルの作成に失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'));
+    }
+  }, [images, settings]);
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -200,7 +262,7 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
           </label>
         </div>
 
-        <div className="mt-6 flex gap-4">
+        <div className="mt-6 flex flex-wrap gap-4">
           <button
             onClick={() => images.forEach(processImage)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -213,6 +275,13 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             すべてダウンロード
+          </button>
+          <button
+            onClick={downloadAllAsZip}
+            disabled={!images.some(img => img.processed)}
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            ZIPでダウンロード
           </button>
         </div>
       </div>
