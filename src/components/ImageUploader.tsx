@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import LoadingButton from './LoadingButton';
 
 interface ImageUploaderProps {
   onFilesSelected: (files: File[]) => void;
@@ -8,7 +9,8 @@ interface ImageUploaderProps {
 
 export default function ImageUploader({ onFilesSelected }: ImageUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isDirectoryMode, setIsDirectoryMode] = useState(false);
+  const [isFileLoading, setIsFileLoading] = useState(false);
+  const [isFolderLoading, setIsFolderLoading] = useState(false);
 
   const processEntry = useCallback(async (entry: FileSystemEntry, files: File[]): Promise<void> => {
     if (entry.isFile) {
@@ -75,17 +77,51 @@ export default function ImageUploader({ onFilesSelected }: ImageUploaderProps) {
   );
 
   const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-        const files = Array.from(e.target.files).filter((file) => file.type.startsWith('image/'));
+        setIsFileLoading(true);
+        
+        try {
+          await new Promise(resolve => setTimeout(resolve, 100)); // 短い遅延でローディング表示
+          const files = Array.from(e.target.files).filter((file) => file.type.startsWith('image/'));
 
-        if (files.length > 0) {
-          onFilesSelected(files);
+          if (files.length > 0) {
+            onFilesSelected(files);
+          }
+        } finally {
+          setIsFileLoading(false);
         }
       }
     },
     [onFilesSelected]
   );
+
+  const handleFolderButtonClick = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.webkitdirectory = true;
+    input.multiple = true;
+    input.accept = 'image/*';
+    
+    input.onchange = async (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files) {
+        setIsFolderLoading(true);
+        
+        try {
+          await new Promise(resolve => setTimeout(resolve, 200)); // フォルダは少し長めの遅延
+          const files = Array.from(target.files).filter((file) => file.type.startsWith('image/'));
+          if (files.length > 0) {
+            onFilesSelected(files);
+          }
+        } finally {
+          setIsFolderLoading(false);
+        }
+      }
+    };
+    
+    input.click();
+  }, [onFilesSelected]);
 
   return (
     <div className="mb-8">
@@ -122,36 +158,34 @@ export default function ImageUploader({ onFilesSelected }: ImageUploaderProps) {
           <p className="text-sm text-gray-500">JPEG、PNG、WebP形式に対応 • フォルダ内の画像ファイルも自動検出</p>
         </div>
 
-        <div className="flex items-center gap-4 mb-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={isDirectoryMode}
-              onChange={(e) => setIsDirectoryMode(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm text-gray-600">フォルダを選択</span>
-          </label>
-        </div>
-
         <input
           type="file"
-          multiple={!isDirectoryMode}
+          multiple
           accept="image/*"
           onChange={handleFileSelect}
           className="hidden"
           id="file-upload"
-          {...(isDirectoryMode ? { webkitdirectory: true, directory: true } : {})}
+          disabled={isFileLoading}
         />
 
-        <label
-          htmlFor="file-upload"
-          className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white cursor-pointer ${
-            isDirectoryMode ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'
-          } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-        >
-          {isDirectoryMode ? 'フォルダを選択' : 'ファイルを選択'}
-        </label>
+        <div className="flex gap-3">
+          <LoadingButton
+            type="label"
+            htmlFor="file-upload"
+            isLoading={isFileLoading}
+            variant="blue"
+          >
+            ファイルを選択
+          </LoadingButton>
+          
+          <LoadingButton
+            onClick={handleFolderButtonClick}
+            isLoading={isFolderLoading}
+            variant="green"
+          >
+            フォルダを選択
+          </LoadingButton>
+        </div>
       </div>
     </div>
   );

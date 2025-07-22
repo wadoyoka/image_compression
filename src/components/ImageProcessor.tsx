@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import { ImageFile } from '@/app/page';
+import LoadingButton from './LoadingButton';
 
 interface ImageProcessorProps {
   images: ImageFile[];
@@ -27,6 +28,8 @@ const defaultSettings: ProcessingSettings = {
 export default function ImageProcessor({ images, onRemoveImage, onImageProcessed }: ImageProcessorProps) {
   const [settings, setSettings] = useState<ProcessingSettings>(defaultSettings);
   const [processing, setProcessing] = useState<Set<string>>(new Set());
+  const [isZipDownloading, setIsZipDownloading] = useState(false);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -130,6 +133,7 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
     const processedImages = images.filter(img => img.processed);
     if (processedImages.length === 0) return;
 
+    setIsZipDownloading(true);
     try {
       const formData = new FormData();
       
@@ -185,8 +189,19 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
     } catch (error) {
       console.error('ZIP作成エラー:', error);
       alert('ZIPファイルの作成に失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'));
+    } finally {
+      setIsZipDownloading(false);
     }
   }, [images, settings]);
+
+  const processBatch = useCallback(async () => {
+    setIsBatchProcessing(true);
+    try {
+      await Promise.all(images.map(processImage));
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  }, [images, processImage]);
 
   return (
     <div className="space-y-6">
@@ -263,26 +278,30 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
         </div>
 
         <div className="mt-6 flex flex-wrap gap-4">
-          <button
-            onClick={() => images.forEach(processImage)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <LoadingButton
+            onClick={processBatch}
+            isLoading={isBatchProcessing}
+            variant="blue"
           >
             すべて圧縮
-          </button>
-          <button
+          </LoadingButton>
+          
+          <LoadingButton
             onClick={downloadAll}
             disabled={!images.some(img => img.processed)}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            variant="green"
           >
             すべてダウンロード
-          </button>
-          <button
+          </LoadingButton>
+          
+          <LoadingButton
             onClick={downloadAllAsZip}
+            isLoading={isZipDownloading}
             disabled={!images.some(img => img.processed)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            variant="purple"
           >
             ZIPでダウンロード
-          </button>
+          </LoadingButton>
         </div>
       </div>
 
@@ -297,12 +316,14 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
                 height={200}
                 className="w-full h-48 object-cover"
               />
-              <button
+              <LoadingButton
                 onClick={() => onRemoveImage(imageFile.id)}
-                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                variant="red"
+                size="sm"
+                className="absolute top-2 right-2 !w-6 !h-6 !p-0 rounded-full !text-sm"
               >
                 ×
-              </button>
+              </LoadingButton>
             </div>
             
             <div className="p-4">
@@ -323,20 +344,25 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
               </div>
 
               <div className="mt-4 flex gap-2">
-                <button
+                <LoadingButton
                   onClick={() => processImage(imageFile)}
-                  disabled={processing.has(imageFile.id)}
-                  className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400"
+                  isLoading={processing.has(imageFile.id)}
+                  variant="blue"
+                  size="sm"
+                  className="flex-1"
                 >
-                  {processing.has(imageFile.id) ? '処理中...' : '圧縮'}
-                </button>
+                  圧縮
+                </LoadingButton>
+                
                 {imageFile.processed && (
-                  <button
+                  <LoadingButton
                     onClick={() => downloadImage(imageFile)}
-                    className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    variant="green"
+                    size="sm"
+                    className="flex-1"
                   >
                     ダウンロード
-                  </button>
+                  </LoadingButton>
                 )}
               </div>
             </div>
