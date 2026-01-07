@@ -25,6 +25,11 @@ const defaultSettings: ProcessingSettings = {
   maintainAspectRatio: true,
 };
 
+// Electron環境かどうかを判定
+const isElectron = (): boolean => {
+  return typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
+};
+
 export default function ImageProcessor({ images, onRemoveImage, onImageProcessed }: ImageProcessorProps) {
   const [settings, setSettings] = useState<ProcessingSettings>(defaultSettings);
   const [processing, setProcessing] = useState<Set<string>>(new Set());
@@ -41,32 +46,50 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
 
   const processImage = useCallback(async (imageFile: ImageFile) => {
     setProcessing(prev => new Set(prev).add(imageFile.id));
-    
+
     try {
-      const formData = new FormData();
-      formData.append('file', imageFile.file);
-      formData.append('quality', settings.quality.toString());
-      formData.append('format', settings.format);
-      formData.append('maintainAspectRatio', settings.maintainAspectRatio.toString());
-      
-      if (settings.width) {
-        formData.append('width', settings.width.toString());
+      let result;
+
+      if (isElectron() && window.electronAPI) {
+        // Electron環境: IPCを使用
+        const buffer = await imageFile.file.arrayBuffer();
+        result = await window.electronAPI.compressImage({
+          buffer,
+          type: imageFile.file.type,
+          size: imageFile.file.size,
+          quality: settings.quality,
+          width: settings.width,
+          height: settings.height,
+          format: settings.format,
+          maintainAspectRatio: settings.maintainAspectRatio
+        });
+      } else {
+        // Web環境: APIを使用
+        const formData = new FormData();
+        formData.append('file', imageFile.file);
+        formData.append('quality', settings.quality.toString());
+        formData.append('format', settings.format);
+        formData.append('maintainAspectRatio', settings.maintainAspectRatio.toString());
+
+        if (settings.width) {
+          formData.append('width', settings.width.toString());
+        }
+        if (settings.height) {
+          formData.append('height', settings.height.toString());
+        }
+
+        const response = await fetch('/api/compress', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error('圧縮に失敗しました');
+        }
+
+        result = await response.json();
       }
-      if (settings.height) {
-        formData.append('height', settings.height.toString());
-      }
-      
-      const response = await fetch('/api/compress', {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error('圧縮に失敗しました');
-      }
-      
-      const result = await response.json();
-      
+
       if (result.success) {
         onImageProcessed(imageFile.id, result.compressedImage, result.compressedSize);
       } else {
@@ -135,36 +158,60 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
 
     setIsZipDownloading(true);
     try {
-      const formData = new FormData();
-      
-      // 処理済み画像のファイルを追加
-      processedImages.forEach(imageFile => {
-        formData.append('files', imageFile.file);
-      });
-      
-      formData.append('quality', settings.quality.toString());
-      formData.append('format', settings.format);
-      formData.append('maintainAspectRatio', settings.maintainAspectRatio.toString());
-      
-      if (settings.width) {
-        formData.append('width', settings.width.toString());
+      let result;
+
+      if (isElectron() && window.electronAPI) {
+        // Electron環境: IPCを使用
+        const filesData = await Promise.all(
+          processedImages.map(async (imageFile) => ({
+            buffer: await imageFile.file.arrayBuffer(),
+            name: imageFile.file.name,
+            type: imageFile.file.type,
+            size: imageFile.file.size
+          }))
+        );
+
+        result = await window.electronAPI.compressBatch({
+          files: filesData,
+          quality: settings.quality,
+          width: settings.width,
+          height: settings.height,
+          format: settings.format,
+          maintainAspectRatio: settings.maintainAspectRatio
+        });
+      } else {
+        // Web環境: APIを使用
+        const formData = new FormData();
+
+        // 処理済み画像のファイルを追加
+        processedImages.forEach(imageFile => {
+          formData.append('files', imageFile.file);
+        });
+
+        formData.append('quality', settings.quality.toString());
+        formData.append('format', settings.format);
+        formData.append('maintainAspectRatio', settings.maintainAspectRatio.toString());
+
+        if (settings.width) {
+          formData.append('width', settings.width.toString());
+        }
+        if (settings.height) {
+          formData.append('height', settings.height.toString());
+        }
+
+        const response = await fetch('/api/compress-batch', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error('ZIP作成に失敗しました');
+        }
+
+        result = await response.json();
       }
-      if (settings.height) {
-        formData.append('height', settings.height.toString());
-      }
-      
-      const response = await fetch('/api/compress-batch', {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error('ZIP作成に失敗しました');
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
+
+      if (result.success && result.zipFile) {
         // ZIPファイルをダウンロード
         const byteCharacters = atob(result.zipFile.split(',')[1]);
         const byteNumbers = new Array(byteCharacters.length);
@@ -174,14 +221,14 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: 'application/zip' });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = `compressed_images_${new Date().toISOString().slice(0, 10)}.zip`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        
+
         URL.revokeObjectURL(url);
       } else {
         throw new Error(result.error || 'ZIP作成に失敗しました');
