@@ -1,6 +1,6 @@
-appId: "io.github.rbfraphael.electron-next"
-productName: "Electron Next.JS"
-copyright: "Copyright (c) 2023 RBFraphael"
+appId: "com.imagecompressor.app"
+productName: "Image Compressor"
+copyright: "Copyright (c) 2024"
 win:
   target: ["dir", "portable", "zip"]
   icon: "resources/icon.ico"
@@ -9,4 +9,4 @@ linux:
   icon: "resources/icon.png"
 mac:
   target: ["dir", "dmg", "zip"]
-  icon: "resources/icon.icns"
+  icon: "resources/icon.png"

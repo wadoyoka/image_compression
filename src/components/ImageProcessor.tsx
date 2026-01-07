@@ -144,14 +144,6 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
     }
   }, [settings.format]);
 
-  const downloadAll = useCallback(() => {
-    images.forEach(image => {
-      if (image.processed) {
-        downloadImage(image);
-      }
-    });
-  }, [images, downloadImage]);
-
   const downloadAllAsZip = useCallback(async () => {
     const processedImages = images.filter(img => img.processed);
     if (processedImages.length === 0) return;
@@ -334,20 +326,12 @@ export default function ImageProcessor({ images, onRemoveImage, onImageProcessed
           </LoadingButton>
           
           <LoadingButton
-            onClick={downloadAll}
+            onClick={downloadAllAsZip}
+            isLoading={isZipDownloading}
             disabled={!images.some(img => img.processed)}
             variant="green"
           >
             すべてダウンロード
-          </LoadingButton>
-          
-          <LoadingButton
-            onClick={downloadAllAsZip}
-            isLoading={isZipDownloading}
-            disabled={!images.some(img => img.processed)}
-            variant="purple"
-          >
-            ZIPでダウンロード
           </LoadingButton>
         </div>
       </div>
