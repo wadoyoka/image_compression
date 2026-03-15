@@ -1,4 +1,4 @@
-# 画像圧縮ツール (Image Compressor)
+# EdgeCompressor
 
 ユーザーが画像をアップロードし、品質調整・リサイズ・形式変換を行える Web アプリケーション。  
 直感的な GUI でバッチ処理にも対応した高機能な画像圧縮ツールです。
@@ -41,17 +41,24 @@
 - **入力**: JPEG, PNG, WebP
 - **出力**: JPEG, PNG, WebP (相互変換可能)
 
-## 🚀 セットアップ
+## 🚀 インストール
 
-### 前提条件
+### Homebrew (macOS Apple Silicon)
+
+```bash
+brew tap wadoyoka/tap
+brew install EdgeCompressor
+```
+
+### 開発環境セットアップ
+
+#### 前提条件
 - Node.js 18.0以上
 - npm
 
-### インストールと起動
-
 ```bash
 # リポジトリをクローン
-git clone <repository-url>
+git clone https://github.com/wadoyoka/image_compression.git
 cd image_compression
 
 # 依存関係をインストール
