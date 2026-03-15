@@ -1,0 +1,82 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-14  # Apple Silicon (M1) runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        run: npx next build
+
+      - name: Build Electron (macOS arm64)
+        run: npx electron-builder --mac --arm64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/EdgeCompressor-*-arm64-mac.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version and SHA256
+        id: info
+        run: |
+          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          SHA256=$(shasum -a 256 dist/EdgeCompressor-*-arm64-mac.zip | awk '{print $1}')
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Update Homebrew Cask
+        env:
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          VERSION: ${{ steps.info.outputs.version }}
+          SHA256: ${{ steps.info.outputs.sha256 }}
+        run: |
+          git clone https://x-access-token:${HOMEBREW_TAP_GITHUB_TOKEN}@github.com/wadoyoka/homebrew-tap.git /tmp/homebrew-tap
+          cd /tmp/homebrew-tap
+          cat > Casks/edgecompressor.rb << EOF
+          cask "edgecompressor" do
+            version "${VERSION}"
+            sha256 "${SHA256}"
+
+            url "https://github.com/wadoyoka/image_compression/releases/download/v#{version}/EdgeCompressor-#{version}-arm64-mac.zip"
+            name "EdgeCompressor"
+            desc "Image compression and conversion desktop app"
+            homepage "https://github.com/wadoyoka/image_compression"
+
+            depends_on arch: :arm64
+
+            app "EdgeCompressor.app"
+
+            zap trash: [
+              "~/Library/Application Support/EdgeCompressor",
+              "~/Library/Preferences/com.imagecompressor.app.plist",
+              "~/Library/Caches/com.imagecompressor.app",
+            ]
+          end
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/edgecompressor.rb
+          git commit -m "Update EdgeCompressor to v${VERSION}"
+          git push

@@ -1,5 +1,5 @@
 appId: "com.imagecompressor.app"
-productName: "Image Compressor"
+productName: "EdgeCompressor"
 copyright: "Copyright (c) 2024"
 win:
   target: ["dir", "portable", "zip"]
